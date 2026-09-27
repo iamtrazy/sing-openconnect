@@ -50,12 +50,15 @@ func newPinnedHTTPClient(
 		if !strings.EqualFold(destinationHostname, expectedHostname) || uint16(destinationPort) != expectedPort {
 			return nil, E.New(protocolName, " request attempted to dial outside the accepted endpoint")
 		}
-		destinationHost := expectedHostname
-		acceptedPeerAddress := peer.address
-		if acceptedPeerAddress.IsValid() {
-			destinationHost = acceptedPeerAddress.String()
-		}
-		destination := M.ParseSocksaddrHostPort(destinationHost, expectedPort)
+		// Fork-only fix: upstream substitutes the dial target with the peer address
+		// recorded via httptrace.GotConn from the authenticating connection, to pin
+		// later requests to the same physical backend. That recorded address is
+		// meaningless (it's the proxy's address, not the real server's) whenever the
+		// dial is routed through a detour/proxy outbound, which broke every request
+		// made through this pinned client when a "detour" is configured. Always
+		// dialing by hostname lets client.options.Dialer (which is already
+		// detour-aware) resolve consistently instead.
+		destination := M.ParseSocksaddrHostPort(expectedHostname, expectedPort)
 		connection, dialErr := client.options.Dialer.DialContext(ctx, network, destination)
 		if dialErr != nil {
 			return nil, E.Cause(dialErr, "dial ", protocolName, " accepted endpoint")

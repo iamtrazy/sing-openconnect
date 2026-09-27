@@ -28,6 +28,10 @@ type TokenOptions struct {
 	DeviceID      string
 	Counter       uint64
 	UpdateCounter func(ctx context.Context, counter uint64) error
+	// AppendToPassword is a fork-only extension (not upstream). See
+	// OpenConnectTokenOptions.AppendToPassword in sing-box's option package
+	// for the config-facing documentation of this behavior.
+	AppendToPassword bool
 }
 
 type CSDOptions struct {

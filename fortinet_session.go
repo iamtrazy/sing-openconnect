@@ -171,7 +171,9 @@ func (s *fortinetSession) connectPPPTLS() (pppSessionCarrier, error) {
 	if portErr != nil {
 		return pppSessionCarrier{}, portErr
 	}
-	destination := M.ParseSocksaddrHostPort(s.snapshot.acceptedAddress.String(), serverPort)
+	// Fork-only fix: see pinned_http.go for why dialing the pinned peer address
+	// (rather than the hostname) breaks detour/proxy routing.
+	destination := M.ParseSocksaddrHostPort(s.snapshot.serverURL.Hostname(), serverPort)
 	dialer := s.client.options.Dialer
 	rawConnection, dialErr := dialer.DialContext(s.ctx, N.NetworkTCP, destination)
 	if dialErr != nil {
@@ -238,8 +240,9 @@ func (s *fortinetSession) connectPPPDTLS(ctx context.Context) (pppSessionCarrier
 	if tlsConfiguration.ServerName == "" {
 		tlsConfiguration.ServerName = s.snapshot.serverURL.Hostname()
 	}
+	// Fork-only fix: see pinned_http.go; dial by hostname, not the pinned peer address.
 	connection, connectErr := connectCertificateDTLS(ctx, certificateDTLSNegotiation{
-		Address:    net.JoinHostPort(s.snapshot.acceptedAddress.String(), strconv.Itoa(int(serverPort))),
+		Address:    net.JoinHostPort(s.snapshot.serverURL.Hostname(), strconv.Itoa(int(serverPort))),
 		ServerName: s.snapshot.serverURL.Hostname(),
 		TLSConfig:  tlsConfiguration,
 		Dialer:     s.client.options.Dialer,

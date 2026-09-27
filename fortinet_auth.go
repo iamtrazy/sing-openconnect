@@ -638,6 +638,28 @@ func (a *fortinetAuthentication) buildAuthenticationRequest(
 		}
 		if initial && field.name == "credential" {
 			requestField.CacheKey = authCachePassword
+			// Fork-only extension: some Fortinet gateways validate password+token as a
+			// single concatenated credential in one round-trip (the same convention
+			// real openconnect/FortiClient use for "append mode" 2FA), rather than the
+			// separate password + code round-trip this client otherwise implements.
+			if a.tokenGenerator.CanGenerate(form.message) && a.tokenGenerator.options.AppendToPassword {
+				password := a.frontend.client.options.Password
+				tokenMessage := form.message
+				generator := a.tokenGenerator
+				requestField.CacheKey = ""
+				// Kind=token excludes this field from the interactive challenge entirely
+				// (matching how the built-in separate "code" round already behaves),
+				// instead of showing an empty field the dashboard would otherwise require
+				// the user to fill in before it lets the (discarded) form submit.
+				requestField.Kind = authFormFieldToken
+				requestField.Automatic = func(ctx context.Context) (string, error) {
+					code, err := generator.Generate(ctx, tokenMessage)
+					if err != nil {
+						return "", err
+					}
+					return password + code, nil
+				}
+			}
 		}
 		if !initial && (field.name == "code" || field.name == "credential") && field.kind == AuthFormFieldPassword && a.tokenGenerator.CanGenerate(form.message) {
 			requestField.Kind = authFormFieldToken

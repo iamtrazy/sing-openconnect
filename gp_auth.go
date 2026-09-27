@@ -917,7 +917,8 @@ func (f *gpFrontend) logout(ctx context.Context, snapshot gpSessionSnapshot) err
 		if parseErr != nil || parsedPort == 0 {
 			return nil, E.New("logout attempted to dial an invalid gateway port")
 		}
-		destination := M.ParseSocksaddrHostPort(snapshot.authenticatedAddress.String(), uint16(parsedPort))
+		// Fork-only fix: see pinned_http.go; dial by hostname, not the pinned peer address.
+		destination := M.ParseSocksaddrHostPort(gatewayHostname, uint16(parsedPort))
 		return f.client.options.Dialer.DialContext(dialContext, network, destination)
 	}
 	logoutClient := &http.Client{

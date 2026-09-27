@@ -240,8 +240,9 @@ func (c *gpstChannel) connect() (*tls.Conn, error) {
 	if err != nil || gatewayPort == 0 {
 		return nil, markTerminal(E.New("gateway has an invalid GPST port"))
 	}
+	// Fork-only fix: see pinned_http.go; dial by hostname, not the pinned peer address.
 	dialer := c.config.Client.options.Dialer
-	destination := M.ParseSocksaddrHostPort(c.config.Snapshot.authenticatedAddress.Unmap().String(), uint16(gatewayPort))
+	destination := M.ParseSocksaddrHostPort(gatewayHostname, uint16(gatewayPort))
 	rawConnection, err := dialer.DialContext(c.ctx, N.NetworkTCP, destination)
 	if err != nil {
 		return nil, E.Cause(err, "connect GPST TCP transport")

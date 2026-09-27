@@ -89,12 +89,12 @@ func (f *gpFrontend) fetchTunnelConfiguration(ctx context.Context, snapshot gpSe
 		if parseErr != nil || parsedPort == 0 {
 			return nil, markTerminal(E.New("configuration attempted to dial an invalid gateway port"))
 		}
-		destinationHost := gatewayHostname
-		if snapshot.authenticatedAddress.IsValid() {
-			destinationHost = snapshot.authenticatedAddress.String()
-		}
+		// Fork-only fix: see the matching comment in pinned_http.go. Pinning to
+		// snapshot.authenticatedAddress breaks every request through this client
+		// whenever the dial is routed through a detour/proxy outbound, since that
+		// recorded address is the proxy's, not the real gateway's.
 		dialer := f.client.options.Dialer
-		destination := M.ParseSocksaddrHostPort(destinationHost, uint16(parsedPort))
+		destination := M.ParseSocksaddrHostPort(gatewayHostname, uint16(parsedPort))
 		return dialer.DialContext(dialContext, network, destination)
 	}
 	configurationClient := &http.Client{

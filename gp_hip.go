@@ -202,7 +202,8 @@ func (r *gpHIPRunner) Check(ctx context.Context) (gpHIPCheckResult, error) {
 		if err != nil || parsedPort == 0 {
 			return nil, markTerminal(E.New("HIP attempted to dial an invalid gateway port"))
 		}
-		destination := M.ParseSocksaddrHostPort(r.authenticatedAddress.String(), uint16(parsedPort))
+		// Fork-only fix: see pinned_http.go; dial by hostname, not the pinned peer address.
+		destination := M.ParseSocksaddrHostPort(gatewayHost, uint16(parsedPort))
 		dialer := r.client.options.Dialer
 		conn, err := dialer.DialContext(dialContext, network, destination)
 		if err != nil {
